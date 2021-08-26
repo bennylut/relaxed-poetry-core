@@ -1,3 +1,9 @@
+# About This Fork
+This is a poetry-core fork with some relaxations and additional features 
+Please see [Relaxed Poetry](https://github.com/bennylut/relaxed-poetry) for more information
+
+**The rest of this README left as is from the original Poetry Core README**
+
 # Poetry Core
 [![PyPI version](https://img.shields.io/pypi/v/poetry-core)](https://pypi.org/project/poetry-core/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/poetry-core)](https://pypi.org/project/poetry-core/)
