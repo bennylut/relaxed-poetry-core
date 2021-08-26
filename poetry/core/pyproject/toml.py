@@ -29,12 +29,14 @@ class PyProjectTOML:
     @property
     def data(self) -> "TOMLDocument":
         from tomlkit.toml_document import TOMLDocument
+        from poetry.core.pyproject.properties import substitute_toml
 
         if self._data is None:
             if not self._file.exists():
                 self._data = TOMLDocument()
+
             else:
-                self._data = self._file.read()
+                self._data = substitute_toml(self._file.read())
 
         return self._data
 
