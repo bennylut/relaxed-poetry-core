@@ -76,9 +76,3 @@ def _substitute_obj(props: Dict[str, Any], o: Any) -> Any:
         return o
 
 
-if __name__ == '__main__':
-    from poetry.core.pyproject.toml import PyProjectTOML
-
-    proj = PyProjectTOML("/home/bennyl/projects/poetry-core/workspace/test.toml")
-
-    print(substitute_toml(proj.data))

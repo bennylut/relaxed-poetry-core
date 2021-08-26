@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from poetry.core.pyproject.tables import BuildSystem
     from poetry.core.toml import TOMLFile
 
+_PY_PROJECT_TOML_CACHE = {}
 
 class PyProjectTOML:
     def __init__(self, path: Union[str, Path]) -> None:
@@ -28,15 +29,37 @@ class PyProjectTOML:
 
     @property
     def data(self) -> "TOMLDocument":
+
+        cache_key = str(self._file.path)
+        if cache_key in _PY_PROJECT_TOML_CACHE:
+            self._data = _PY_PROJECT_TOML_CACHE[cache_key]
+
         from tomlkit.toml_document import TOMLDocument
         from poetry.core.pyproject.properties import substitute_toml
+        from poetry.core.pyproject.profiles import apply_profiles
 
         if self._data is None:
             if not self._file.exists():
                 self._data = TOMLDocument()
 
             else:
-                self._data = substitute_toml(self._file.read())
+                data = self._file.read()
+                sdata = substitute_toml(data)
+
+                try:
+                    default_profiles = sdata["tool"]["relaxed"]["poetry"]["profiles"]["default"]
+                    if isinstance(default_profiles, str):
+                        default_profiles = [default_profiles]
+                except KeyError:
+                    default_profiles = []
+
+                profiles_dir = self._file.path.parent.joinpath("rp-build/profiles")
+                if profiles_dir.exists():
+                    apply_profiles(data, profiles_dir, default_profiles)
+
+                # a second substitution is required after the profiles been applied
+                self._data = substitute_toml(data)
+                _PY_PROJECT_TOML_CACHE[cache_key] = self._data
 
         return self._data
 
