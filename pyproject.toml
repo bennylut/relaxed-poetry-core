@@ -1,17 +1,17 @@
 [tool.poetry]
-name = "poetry-core"
-version = "1.1.0a6"
-description = "Poetry PEP 517 Build Backend"
-authors = ["Sébastien Eustace <sebastien@eustace.io>"]
+name = "relaxed-poetry-core"
+version = "0.0.1"
+description = "Fork of poetry-core, with some relaxations"
+authors = ["bennylut"]
 
 license = "MIT"
 
 readme = "README.md"
 
-homepage = "https://github.com/python-poetry/poetry-core"
-repository = "https://github.com/python-poetry/poetry-core"
+homepage = "https://github.com/bennylut/relaxed-poetry-core"
+repository = "https://github.com/bennylut/relaxed-poetry-core"
 
-keywords = ["packaging", "dependency", "poetry"]
+keywords = ["packaging", "dependency", "poetry", "relaxed-poetry"]
 
 classifiers = [
     "Topic :: Software Development :: Build Tools",
@@ -30,7 +30,7 @@ exclude = [
 ]
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/python-poetry/poetry/issues"
+"Bug Tracker" = "https://github.com/bennylut/relaxed-poetry/issues"
 
 [tool.poetry.dependencies]
 python = "^3.6"

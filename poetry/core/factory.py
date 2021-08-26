@@ -27,13 +27,14 @@ class Factory(object):
     """
 
     def create_poetry(
-        self, cwd: Optional[Path] = None, with_groups: bool = True
+            self, cwd: Optional[Path] = None, with_groups: bool = True,
+            profiles: Optional[List[str]] = None
     ) -> "Poetry":
         from .poetry import Poetry
         from .pyproject.toml import PyProjectTOML
 
         poetry_file = self.locate(cwd)
-        local_config = PyProjectTOML(path=poetry_file).poetry_config
+        local_config = PyProjectTOML(path=poetry_file, profiles=profiles).poetry_config
 
         # Checking validity
         check_result = self.validate(local_config)

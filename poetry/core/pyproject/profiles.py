@@ -30,16 +30,44 @@ def apply_profiles(
         profiles_dir: Path,
         manually_activated_profiles: List[str]
 ):
-    for manually_activated_profile in manually_activated_profiles:
-        profile_path = profiles_dir.joinpath(manually_activated_profile + ".toml")
-        if not profile_path.exists():
-            raise ValueError(f"cannot activate requested profile, {profile_path} not found")
+    try:
+        profile_mapping = project["tool"]["relaxed-poetry"]["profiles"]
+    except KeyError:
+        profile_mapping = {}
 
-        _apply_profile(project, profile_path)
+    activated_profiles = set()
+
+    for manually_activated_profile in manually_activated_profiles:
+        optional = manually_activated_profile[0] == '?'
+        if optional:
+            manually_activated_profile = manually_activated_profile[1:]
+
+        profiles_to_activate = profile_mapping.get(manually_activated_profile, manually_activated_profile)
+        if not isinstance(profiles_to_activate, list):
+            profiles_to_activate = [profiles_to_activate]
+
+        for profile in profiles_to_activate:
+            if profile in activated_profiles:
+                continue
+
+            activated_profiles.add(profile)
+
+            profile_path = profiles_dir.joinpath(profile + ".toml")
+            if not profile_path.exists():
+                if not optional:
+                    raise ValueError(f"cannot activate requested profile, {profile_path} not found")
+                else:
+                    continue
+
+            print(f"Activating profile: {profile}")
+            _apply_profile(project, profile_path)
 
     for profile_file in profiles_dir.iterdir():
         if profile_file.name.endswith(".py"):
-            import_profile(profile_file)(project)
+            try:
+                import_profile(profile_file)(project)
+            except Exception as e:
+                raise RuntimeError(f"Error while evaluating profile: {profile_file.stem}") from e
 
 
 if __name__ == '__main__':
