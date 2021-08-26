@@ -24,7 +24,7 @@ class _PropertiesTable:
     @staticmethod
     def read(doc: TOMLDocument) -> "_PropertiesTable":
         try:
-            properties = doc["tool"]["relaxed"]["poetry"]["properties"] or {}
+            properties = doc["tool"]["relaxed-poetry"]["properties"] or {}
         except KeyError:
             properties = {}
 
