@@ -92,7 +92,6 @@ class SdistBuilder(Builder):
                 if tar_info.isreg():
                     if str(file.path.absolute()) == pyproject_path_str:
                         # write pyproject.toml after property substitution
-                        print(self._poetry.pyproject.data)
                         file_content = tomlkit.dumps(self._poetry.pyproject.data).encode()
                         tar_info.size = len(file_content)
                         tar.addfile(tar_info, io.BytesIO(file_content))
