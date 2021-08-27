@@ -12,6 +12,7 @@ from typing import Optional
 from typing import Union
 from warnings import warn
 
+from .pyproject.profiles import ProfilesActivationData
 
 if TYPE_CHECKING:
     from .packages.project_package import ProjectPackage
@@ -28,13 +29,14 @@ class Factory(object):
 
     def create_poetry(
             self, cwd: Optional[Path] = None, with_groups: bool = True,
-            profiles: Optional[List[str]] = None
+            profiles: Optional[ProfilesActivationData] = None
     ) -> "Poetry":
         from .poetry import Poetry
         from .pyproject.toml import PyProjectTOML
 
         poetry_file = self.locate(cwd)
-        local_config = PyProjectTOML(path=poetry_file, profiles=profiles).poetry_config
+        pyproject = PyProjectTOML(path=poetry_file, profiles=profiles)
+        local_config = pyproject.poetry_config
 
         # Checking validity
         check_result = self.validate(local_config)
@@ -53,7 +55,7 @@ class Factory(object):
             package, local_config, poetry_file.parent, with_groups=with_groups
         )
 
-        return Poetry(poetry_file, local_config, package)
+        return Poetry(poetry_file, pyproject, package)
 
     @classmethod
     def get_package(cls, name: str, version: str) -> "ProjectPackage":

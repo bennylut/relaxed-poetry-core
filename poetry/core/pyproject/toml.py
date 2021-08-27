@@ -5,6 +5,8 @@ from typing import Optional
 from typing import Union
 from typing import List
 
+from poetry.core.pyproject.profiles import ProfilesActivationData
+
 if TYPE_CHECKING:
     from tomlkit.container import Container
     from tomlkit.items import Item
@@ -15,14 +17,15 @@ if TYPE_CHECKING:
 
 _PY_PROJECT_TOML_CACHE = {}
 
+
 class PyProjectTOML:
-    def __init__(self, path: Union[str, Path], profiles:Optional[List[str]] = None) -> None:
+    def __init__(self, path: Union[str, Path], profiles: Optional[ProfilesActivationData] = None) -> None:
         from poetry.core.toml import TOMLFile
 
         self._file = TOMLFile(path=path)
         self._data: Optional["TOMLDocument"] = None
         self._build_system: Optional["BuildSystem"] = None
-        self._profiles = profiles or []
+        self._profiles = profiles or ProfilesActivationData([], "build")
 
     @property
     def file(self) -> "TOMLFile":
@@ -45,11 +48,9 @@ class PyProjectTOML:
 
             else:
                 data = self._file.read()
-                sdata = substitute_toml(data)
 
                 profiles_dir = self._file.path.parent.joinpath("rp-build/profiles")
-                if profiles_dir.exists():
-                    apply_profiles(data, profiles_dir, self._profiles)
+                apply_profiles(data, profiles_dir, self._profiles)
 
                 # a second substitution is required after the profiles been applied
                 self._data = substitute_toml(data)

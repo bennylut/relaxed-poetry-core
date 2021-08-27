@@ -1,3 +1,4 @@
+import json
 from typing import Dict, Any, Optional
 
 import tomlkit.items
@@ -7,28 +8,36 @@ import os
 
 
 def substitute_toml(doc: TOMLDocument) -> TOMLDocument:
-    table = _PropertiesTable.read(doc)
+    table = PropertiesTable.read(doc)
 
-    # first override table keys via environment variables
-    properties = {pkey: os.environ.get(pkey, pval) for pkey, pval in table.properties.items()}
+    # first override table keys with environment variables
+    # this means that environment variables overrides profiles changes
+    properties = {pkey: _merge_env(pkey, pval) for pkey, pval in table.properties.items()}
     # next try to perform substitution within the properties themselves
     properties = _substitute_properties(properties)
-    # now that we resolved all the property values we can resolve the document itself
+    # now that we resolved all the property values we can find the document itself
     return tomlkit.items.item(_substitute_obj(properties, doc))
 
 
+def _merge_env(property: str, default_value: Any) -> Any:
+    env_value = os.environ.get(property)
+    if env_value is None:
+        return default_value
+    return json.loads(env_value)
+
+
 @dataclass
-class _PropertiesTable:
+class PropertiesTable:
     properties: Dict[str, Any]
 
     @staticmethod
-    def read(doc: TOMLDocument) -> "_PropertiesTable":
+    def read(doc: TOMLDocument) -> "PropertiesTable":
         try:
             properties = doc["tool"]["relaxed-poetry"]["properties"] or {}
         except KeyError:
             properties = {}
 
-        return _PropertiesTable(properties)
+        return PropertiesTable(properties)
 
 
 def _substitute_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
@@ -63,16 +72,11 @@ def _substitute_obj(props: Dict[str, Any], o: Any) -> Any:
     if isinstance(o, list):
         return [_substitute_obj(props, item) for item in o]
     elif isinstance(o, dict):
-        if len(o) == 1 and "prop" in o:
-            return props[o["prop"]]
-
         return {k: _substitute_obj(props, v) for k, v in o.items()}
     elif isinstance(o, str):
         s = o.strip()
         if len(s) > 1 and s[0] == '$':
-            return props[s[1:]]
+            return props.get(s[1:], s)
         return o
     else:
         return o
-
-

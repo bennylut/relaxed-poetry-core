@@ -19,6 +19,8 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
+import io
+import tomlkit
 
 from .builder import Builder
 from .builder import BuildIncludeFile
@@ -79,6 +81,7 @@ class SdistBuilder(Builder):
 
             files_to_add = self.find_files_to_add(exclude_build=False)
 
+            pyproject_path_str = str(self._poetry.pyproject.file.path.absolute())
             for file in sorted(files_to_add, key=lambda x: x.relative_to_source_root()):
                 tar_info = tar.gettarinfo(
                     str(file.path),
@@ -87,8 +90,15 @@ class SdistBuilder(Builder):
                 tar_info = self.clean_tarinfo(tar_info)
 
                 if tar_info.isreg():
-                    with file.path.open("rb") as f:
-                        tar.addfile(tar_info, f)
+                    if str(file.path.absolute()) == pyproject_path_str:
+                        # write pyproject.toml after property substitution
+                        print(self._poetry.pyproject.data)
+                        file_content = tomlkit.dumps(self._poetry.pyproject.data).encode()
+                        tar_info.size = len(file_content)
+                        tar.addfile(tar_info, io.BytesIO(file_content))
+                    else:
+                        with file.path.open("rb") as f:
+                            tar.addfile(tar_info, f)
                 else:
                     tar.addfile(tar_info)  # Symlinks & ?
 

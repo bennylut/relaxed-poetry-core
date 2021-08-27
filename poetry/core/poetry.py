@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 from typing import TYPE_CHECKING
 from typing import Any
+from poetry.core.pyproject.toml import PyProjectTOML
 
 
 if TYPE_CHECKING:
@@ -17,14 +18,14 @@ class Poetry(object):
     def __init__(
         self,
         file: "Path",
-        local_config: dict,
+        pyproject: PyProjectTOML,
         package: "ProjectPackage",
     ) -> None:
         from poetry.core.pyproject.toml import PyProjectTOML  # noqa
 
-        self._pyproject = PyProjectTOML(file)
+        self._pyproject = pyproject
         self._package = package
-        self._local_config = local_config
+        self._local_config = pyproject.poetry_config
 
     @property
     def pyproject(self) -> "PyProjectTOML":
