@@ -23,7 +23,7 @@ class _Properties:
         return self._props[item]
 
     def __setitem__(self, key: str, value):
-        self._props[key] = str
+        self._props[key] = value
 
 
 class _Execution:

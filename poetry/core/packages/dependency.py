@@ -41,6 +41,7 @@ class Dependency(PackageSpecification):
         source_url: Optional[str] = None,
         source_reference: Optional[str] = None,
         source_resolved_reference: Optional[str] = None,
+        forced_version = False,
     ):
         from poetry.core.version.markers import AnyMarker
 
@@ -53,6 +54,7 @@ class Dependency(PackageSpecification):
             features=extras,
         )
 
+        self.forced_version = forced_version
         self._constraint = None
         self.set_constraint(constraint=constraint)
 
@@ -606,7 +608,7 @@ class Dependency(PackageSpecification):
 
     def __str__(self) -> str:
         if self.is_root:
-            return self._pretty_name
+            return f"{self._pretty_name} {self.constraint}"
         return self.base_pep_508_name
 
     def __repr__(self) -> str:

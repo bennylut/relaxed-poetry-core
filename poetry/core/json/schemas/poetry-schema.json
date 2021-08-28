@@ -316,6 +316,10 @@
           "type": "string",
           "description": "The python versions for which the dependency should be installed."
         },
+        "forced": {
+          "type": "boolean",
+          "description": "Force this dependency version - no matter the conflicts"
+        },
         "platform": {
           "type": "string",
           "description": "The platform(s) for which the dependency should be installed."

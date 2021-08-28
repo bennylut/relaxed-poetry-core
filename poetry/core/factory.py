@@ -255,6 +255,8 @@ class Factory(object):
             python_versions = constraint.get("python")
             platform = constraint.get("platform")
             markers = constraint.get("markers")
+            forced_version = constraint.get("forced", False)
+
             if "allows-prereleases" in constraint:
                 message = (
                     'The "{}" dependency specifies '
@@ -337,6 +339,7 @@ class Factory(object):
                     groups=groups,
                     allows_prereleases=allows_prereleases,
                     extras=constraint.get("extras", []),
+                    forced_version=forced_version
                 )
 
             if not markers:
