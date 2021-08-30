@@ -20,7 +20,7 @@ def substitute_toml(doc: TOMLDocument) -> TOMLDocument:
 
 
 def _merge_env(property: str, default_value: Any) -> Any:
-    env_value = os.environ.get(property)
+    env_value = os.environ.get(property.replace('-','_'))
     if env_value is None:
         return default_value
     return json.loads(env_value)
