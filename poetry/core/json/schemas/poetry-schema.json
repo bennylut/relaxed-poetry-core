@@ -288,6 +288,9 @@
               "$ref": "#/definitions/path-dependency"
             },
             {
+              "$ref": "#/definitions/sibling-dependency"
+            },
+            {
               "$ref": "#/definitions/url-dependency"
             },
             {
@@ -490,6 +493,46 @@
         }
       }
     },
+    "sibling-dependency": {
+      "type": "object",
+      "required": [
+        "sibling"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sibling": {
+          "type": "boolean",
+          "description": "Indicator that this dependency is a sibling dependency"
+        },
+        "version": {
+          "type": "string",
+          "description": "The constraint of the dependency."
+        },
+        "python": {
+          "type": "string",
+          "description": "The python versions for which the dependency should be installed."
+        },
+        "platform": {
+          "type": "string",
+          "description": "The platform(s) for which the dependency should be installed."
+        },
+        "markers": {
+          "type": "string",
+          "description": "The PEP 508 compliant environment markers for which the dependency should be installed."
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Whether the dependency is optional or not."
+        },
+        "extras": {
+          "type": "array",
+          "description": "The required extras for this dependency.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "url-dependency": {
       "type": "object",
       "required": [
@@ -545,6 +588,9 @@
           },
           {
             "$ref": "#/definitions/path-dependency"
+          },
+          {
+            "$ref": "#/definitions/sibling-dependency"
           },
           {
             "$ref": "#/definitions/url-dependency"

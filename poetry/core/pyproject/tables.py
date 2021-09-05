@@ -9,6 +9,10 @@ from poetry.core.utils.helpers import canonicalize_name
 if TYPE_CHECKING:
     from poetry.core.packages import Dependency  # noqa
 
+PROPERTIES_TABLE = "tool.relaxed-poetry.properties".split(".")
+SUBPROJECTS_TABLE = "tool.relaxed-poetry.sub-projects".split(".")
+POETRY_TABLE = "tool.poetry".split(".")
+
 
 # TODO: Convert to dataclass once python 2.7, 3.5 is dropped
 class BuildSystem:

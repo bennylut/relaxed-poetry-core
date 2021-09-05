@@ -2,11 +2,12 @@ from pathlib import Path
 from typing import List, MutableMapping, Callable, Dict, Any
 
 from dataclasses import dataclass
-from tomlkit.toml_document import TOMLDocument
 
-from poetry.core.pyproject.properties import PropertiesTable
+from poetry.core.pyproject.tables import PROPERTIES_TABLE
 from poetry.core.toml import TOMLFile
 import importlib.util
+
+from poetry.core.utils.collections_ext import nesteddict_lookup
 
 
 @dataclass
@@ -38,7 +39,7 @@ class _Execution:
 def _activate_manual_profile(profile_path: Path, props: _Properties, exec: _Execution):
     print(f"Activating Manual Profile: {profile_path.stem}")
 
-    overrides = PropertiesTable.read(TOMLFile(profile_path).read()).properties
+    overrides = nesteddict_lookup(TOMLFile(profile_path).read(), PROPERTIES_TABLE, {})
     props._props.update(overrides)
 
 
@@ -69,24 +70,30 @@ def _apply_profile(project: MutableMapping, profile: Path):
 
 
 def apply_profiles(
-        project: TOMLDocument,
-        profiles_dir: Path,
+        properties: Dict[str, Any],
+        profiles_dirs: List[Path],
         activation_data: ProfilesActivationData
 ):
-    properties = _Properties(PropertiesTable.read(project).properties)
+    properties = _Properties(properties)
     execution = _Execution(activation_data)
 
     # activate automatic profiles
-    if profiles_dir.exists():
-        for profile in profiles_dir.iterdir():
-            if profile.name.endswith(".py"):
-                _activate_automatic_profile(profile, properties, execution)
+    for profiles_dir in profiles_dirs:
+        if profiles_dir.exists():
+            for profile in profiles_dir.iterdir():
+                if profile.name.endswith(".py"):
+                    _activate_automatic_profile(profile, properties, execution)
 
     # activate manual profiles
     for profile_name in activation_data.manual_profiles:
-        profile = profiles_dir.joinpath(f"{profile_name}.toml")
+        profile = None
+        for profiles_dir in profiles_dirs:
+            profile = profiles_dir.joinpath(f"{profile_name}.toml")
+            if profile.exists():
+                break
+
         if not profile.exists():
-            FileNotFoundError(f"could not find profile: {profile}")
+            FileNotFoundError(f"could not find profile: {profile_name}")
 
         _activate_manual_profile(profile, properties, execution)
 

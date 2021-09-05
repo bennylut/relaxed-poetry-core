@@ -183,28 +183,7 @@ class Dependency(PackageSpecification):
 
     @property
     def base_pep_508_name(self) -> str:
-        from poetry.core.semver.version import Version
-        from poetry.core.semver.version_union import VersionUnion
-
-        requirement = self.pretty_name
-
-        if self.extras:
-            requirement += "[{}]".format(",".join(self.extras))
-
-        if isinstance(self.constraint, VersionUnion):
-            if self.constraint.excludes_single_version():
-                requirement += " ({})".format(str(self.constraint))
-            else:
-                constraints = self.pretty_constraint.split(",")
-                constraints = [parse_constraint(c) for c in constraints]
-                constraints = [str(c) for c in constraints]
-                requirement += " ({})".format(",".join(constraints))
-        elif isinstance(self.constraint, Version):
-            requirement += " (=={})".format(self.constraint.text)
-        elif not self.constraint.is_any():
-            requirement += " ({})".format(str(self.constraint).replace(" ", ""))
-
-        return requirement
+        return base_pep_508_name_of(self)
 
     def allows_prereleases(self) -> bool:
         return self._allows_prereleases
@@ -639,3 +618,28 @@ def _make_file_or_dir_dep(
         return DirectoryDependency(name, path, base=base, extras=extras)
 
     return None
+
+
+def base_pep_508_name_of(self: Dependency) -> str:
+    from poetry.core.semver.version import Version
+    from poetry.core.semver.version_union import VersionUnion
+
+    requirement = self.pretty_name
+
+    if self.extras:
+        requirement += "[{}]".format(",".join(self.extras))
+
+    if isinstance(self.constraint, VersionUnion):
+        if self.constraint.excludes_single_version():
+            requirement += " ({})".format(str(self.constraint))
+        else:
+            constraints = self.pretty_constraint.split(",")
+            constraints = [parse_constraint(c) for c in constraints]
+            constraints = [str(c) for c in constraints]
+            requirement += " ({})".format(",".join(constraints))
+    elif isinstance(self.constraint, Version):
+        requirement += " (=={})".format(self.constraint.text)
+    elif not self.constraint.is_any():
+        requirement += " ({})".format(str(self.constraint).replace(" ", ""))
+
+    return requirement

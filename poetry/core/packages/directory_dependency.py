@@ -8,6 +8,7 @@ from typing import Union
 
 if TYPE_CHECKING:
     from .constraints import BaseConstraint  # noqa
+    from ..semver.helpers import VersionTypes
 
 from .dependency import Dependency
 from .utils.utils import path_to_url
@@ -24,7 +25,7 @@ class DirectoryDependency(Dependency):
         develop: bool = False,
         extras: Optional[Union[List[str], FrozenSet[str]]] = None,
     ) -> None:
-        from poetry.core.pyproject.toml import PyProjectTOML
+        from poetry.core.pyproject.toml import PyProject
 
         self._path = path
         self._base = base or Path.cwd()
@@ -47,9 +48,7 @@ class DirectoryDependency(Dependency):
 
         # Checking content to determine actions
         setup = self._full_path / "setup.py"
-        self._supports_poetry = PyProjectTOML(
-            self._full_path / "pyproject.toml"
-        ).is_poetry_project()
+        self._supports_poetry = PyProject.has_poetry_section(self._full_path / "pyproject.toml")
 
         if not setup.exists() and not self._supports_poetry:
             raise ValueError(
@@ -137,3 +136,25 @@ class DirectoryDependency(Dependency):
 
     def __hash__(self) -> int:
         return hash((self._name, self._full_path.as_posix()))
+
+
+class SiblingDependency(DirectoryDependency):
+    def __init__(
+            self,
+            name: str,
+            path: Path,
+            constraint: Union[str, "VersionTypes"],
+            groups: Optional[List[str]] = None,
+            optional: bool = False,
+            base: Optional[Path] = None,
+            extras: Optional[Union[List[str], FrozenSet[str]]] = None,
+    ):
+        super(SiblingDependency, self).__init__(
+            name, path, groups=groups, optional=optional, base=base, extras=extras)
+
+        self.set_constraint(constraint)
+
+    @property
+    def base_pep_508_name(self) -> str:
+        from poetry.core.packages.dependency import base_pep_508_name_of
+        return base_pep_508_name_of(self)

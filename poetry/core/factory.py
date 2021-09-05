@@ -12,12 +12,16 @@ from typing import Optional
 from typing import Union
 from warnings import warn
 
+from .packages.directory_dependency import SiblingDependency
 from .pyproject.profiles import ProfilesActivationData
+from .pyproject.toml import PyProject
+
+from .pyproject.toml import PyProject
+from .poetry import Poetry
 
 if TYPE_CHECKING:
     from .packages.project_package import ProjectPackage
     from .packages.types import DependencyTypes
-    from .poetry import Poetry
 
 logger = logging.getLogger(__name__)
 
@@ -27,15 +31,27 @@ class Factory(object):
     Factory class to create various elements needed by Poetry.
     """
 
+    def create_poetry_for_pyproject(self, project: PyProject, with_groups: bool = True):
+
+        local_config = project.poetry_config
+
+        # Load package
+        name = local_config["name"]
+        version = local_config["version"]
+        package = self.get_package(name, version)
+        package = self.configure_package(
+            package, local_config, project, with_groups=with_groups
+        )
+
+        return Poetry(project.path, project, package)
+
     def create_poetry(
             self, cwd: Optional[Path] = None, with_groups: bool = True,
             profiles: Optional[ProfilesActivationData] = None
     ) -> "Poetry":
-        from .poetry import Poetry
-        from .pyproject.toml import PyProjectTOML
 
         poetry_file = self.locate(cwd)
-        pyproject = PyProjectTOML(path=poetry_file, profiles=profiles)
+        pyproject = PyProject.read(path=poetry_file, profiles=profiles)
         local_config = pyproject.poetry_config
 
         # Checking validity
@@ -47,15 +63,7 @@ class Factory(object):
 
             raise RuntimeError("The Poetry configuration is invalid:\n" + message)
 
-        # Load package
-        name = local_config["name"]
-        version = local_config["version"]
-        package = self.get_package(name, version)
-        package = self.configure_package(
-            package, local_config, poetry_file.parent, with_groups=with_groups
-        )
-
-        return Poetry(poetry_file, pyproject, package)
+        return self.create_poetry_for_pyproject(pyproject, with_groups=with_groups)
 
     @classmethod
     def get_package(cls, name: str, version: str) -> "ProjectPackage":
@@ -65,15 +73,17 @@ class Factory(object):
 
     @classmethod
     def configure_package(
-        cls,
-        package: "ProjectPackage",
-        config: Dict[str, Any],
-        root: Path,
-        with_groups: bool = True,
+            cls,
+            package: "ProjectPackage",
+            config: Dict[str, Any],
+            project: PyProject,
+            with_groups: bool = True,
     ) -> "ProjectPackage":
         from .packages.dependency import Dependency
         from .packages.dependency_group import DependencyGroup
         from .spdx.helpers import license_by_id
+
+        root = project.path.parent
 
         package.root_dir = root
 
@@ -113,14 +123,14 @@ class Factory(object):
                     for _constraint in constraint:
                         group.add_dependency(
                             cls.create_dependency(
-                                name, _constraint, root_dir=package.root_dir
+                                name, _constraint, root_dir=package.root_dir, project=project
                             )
                         )
 
                     continue
 
                 group.add_dependency(
-                    cls.create_dependency(name, constraint, root_dir=package.root_dir)
+                    cls.create_dependency(name, constraint, root_dir=package.root_dir, project=project)
                 )
 
             package.add_dependency_group(group)
@@ -139,6 +149,7 @@ class Factory(object):
                                     _constraint,
                                     groups=[group_name],
                                     root_dir=package.root_dir,
+                                    project=project
                                 )
                             )
 
@@ -150,6 +161,7 @@ class Factory(object):
                             constraint,
                             groups=[group_name],
                             root_dir=package.root_dir,
+                            project=project
                         )
                     )
 
@@ -166,6 +178,7 @@ class Factory(object):
                                 _constraint,
                                 groups=["dev"],
                                 root_dir=package.root_dir,
+                                project=project
                             )
                         )
 
@@ -173,7 +186,7 @@ class Factory(object):
 
                 group.add_dependency(
                     cls.create_dependency(
-                        name, constraint, groups=["dev"], root_dir=package.root_dir
+                        name, constraint, groups=["dev"], root_dir=package.root_dir, project=project
                     )
                 )
 
@@ -228,11 +241,12 @@ class Factory(object):
 
     @classmethod
     def create_dependency(
-        cls,
-        name: str,
-        constraint: Union[str, Dict[str, Any]],
-        groups: Optional[List[str]] = None,
-        root_dir: Optional[Path] = None,
+            cls,
+            name: str,
+            constraint: Union[str, Dict[str, Any]],
+            groups: Optional[List[str]] = None,
+            root_dir: Optional[Path] = None,
+            project: Optional[PyProject] = None
     ) -> "DependencyTypes":
         from .packages.constraints import parse_constraint as parse_generic_constraint
         from .packages.dependency import Dependency
@@ -321,6 +335,27 @@ class Factory(object):
                         develop=constraint.get("develop", False),
                         extras=constraint.get("extras", []),
                     )
+            elif "sibling" in constraint:
+                if not project:
+                    raise ValueError("sibling dependency can only be created for a given project "
+                                     "(the project argument must be given)")
+
+                sibling = project.lookup_sibling(name)
+                if not sibling:
+                    raise ValueError(f"could not find sibling with given name: '{name}'")
+
+                version = constraint.get("version") or f"^{sibling.version}"
+
+                dependency = SiblingDependency(
+                    name,
+                    sibling.path.parent,
+                    version,
+                    groups=groups,
+                    optional=optional,
+                    base=root_dir,
+                    extras=constraint.get("extras", []),
+                )
+
             elif "url" in constraint:
                 dependency = URLDependency(
                     name,

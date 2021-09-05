@@ -1,18 +1,16 @@
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 import tomlkit.items
-from dataclasses import dataclass
 from tomlkit.toml_document import TOMLDocument
 import os
 
 
-def substitute_toml(doc: TOMLDocument) -> TOMLDocument:
-    table = PropertiesTable.read(doc)
+def substitute_toml(doc: TOMLDocument, props: Dict[str, Any]) -> TOMLDocument:
 
     # first override table keys with environment variables
     # this means that environment variables overrides profiles changes
-    properties = {pkey: _merge_env(pkey, pval) for pkey, pval in table.properties.items()}
+    properties = {pkey: _merge_env(pkey, pval) for pkey, pval in props.items()}
     # next try to perform substitution within the properties themselves
     properties = _substitute_properties(properties)
     # now that we resolved all the property values we can find the document itself
@@ -25,19 +23,6 @@ def _merge_env(property: str, default_value: Any) -> Any:
         return default_value
     return json.loads(env_value)
 
-
-@dataclass
-class PropertiesTable:
-    properties: Dict[str, Any]
-
-    @staticmethod
-    def read(doc: TOMLDocument) -> "PropertiesTable":
-        try:
-            properties = doc["tool"]["relaxed-poetry"]["properties"] or {}
-        except KeyError:
-            properties = {}
-
-        return PropertiesTable(properties)
 
 
 def _substitute_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
