@@ -45,3 +45,4 @@ class Poetry(object):
 
     def get_project_config(self, config: str, default: Any = None) -> Any:
         return self._local_config.get("config", {}).get(config, default)
+

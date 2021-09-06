@@ -18,8 +18,10 @@ if TYPE_CHECKING:
 
 _PY_PROJECT_CACHE = {}
 
+_PROJECT_MANAGEMENT_FILES_SUBDIR = "etc/rp"
+
 _PARENT_KEY = "tool.relaxed-poetry.parent-project".split(".")
-_RELATIVE_PROFILES_DIR = "buildsys/profiles"
+_RELATIVE_PROFILES_DIR = f"{_PROJECT_MANAGEMENT_FILES_SUBDIR}/profiles"
 _NAME_KEY = "tool.poetry.name".split(".")
 _VERSION_KEY = "tool.poetry.version".split(".")
 
@@ -50,6 +52,10 @@ class PyProject:
     @property
     def properties(self) -> Dict[str, Any]:
         return nesteddict_lookup(self.data, PROPERTIES_TABLE, None)
+
+    @cached_property
+    def project_management_files(self) -> Path:
+        return self.path.parent / _PROJECT_MANAGEMENT_FILES_SUBDIR
 
     @cached_property
     def sub_projects(self) -> Optional[Dict[str, "PyProject"]]:
@@ -153,6 +159,9 @@ class PyProject:
 
     @staticmethod
     def has_poetry_section(path: Path) -> bool:
+        if not path.exists():
+            return False
+
         data = TOMLFile(path=path).read()
         return nesteddict_lookup(data, POETRY_TABLE) is not None
 
@@ -179,7 +188,7 @@ class PyProject:
 
             # apply profiles if requested
             if profiles:
-                profiles_dirs = [path / _RELATIVE_PROFILES_DIR]
+                profiles_dirs = [path.parent / _RELATIVE_PROFILES_DIR]
                 p = parent
                 while p:
                     profiles_dirs.append(p.path.parent / _RELATIVE_PROFILES_DIR)
