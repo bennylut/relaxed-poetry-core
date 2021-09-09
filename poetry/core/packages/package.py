@@ -10,6 +10,7 @@ from typing import Union
 
 from poetry.core.semver.helpers import parse_constraint
 from poetry.core.version.markers import parse_marker
+from .directory_dependency import SiblingDependency
 
 from .specification import PackageSpecification
 from .utils.utils import create_nested_marker
@@ -140,7 +141,7 @@ class Package(PackageSpecification):
 
     @property
     def full_pretty_version(self) -> str:
-        if self.source_type in ["file", "directory", "url"]:
+        if self.source_type in ["file", "directory", "url", "sibling"]:
             return "{} {}".format(self._pretty_version, self.source_url)
 
         if self.source_type not in ["hg", "git"]:
@@ -444,6 +445,16 @@ class Package(PackageSpecification):
                 develop=self.develop,
                 extras=self.features,
             )
+        elif self.source_type == "sibling":
+            dep = SiblingDependency(
+                self._name,
+                Path(self._source_url),
+                self._version,
+                groups=list(self._dependency_groups.keys()),
+                optional=self.optional,
+                base=self.root_dir,
+                extras=self.features,
+            )
         elif self.source_type == "file":
             dep = FileDependency(
                 self._name,
@@ -482,7 +493,7 @@ class Package(PackageSpecification):
         if not self.python_constraint.is_any():
             dep.python_versions = self.python_versions
 
-        if self._source_type not in ["directory", "file", "url", "git"]:
+        if self.source_type not in ["directory", "file", "url", "git", "sibling"]:
             return dep
 
         return dep.with_constraint(self._version)
@@ -530,8 +541,8 @@ class Package(PackageSpecification):
         if self._features:
             args.append("features={}".format(repr(self._features)))
 
-        if self._source_type:
-            args.append("source_type={}".format(repr(self._source_type)))
+        if self.source_type:
+            args.append("source_type={}".format(repr(self.source_type)))
             args.append("source_url={}".format(repr(self._source_url)))
 
             if self._source_reference:

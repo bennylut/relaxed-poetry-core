@@ -375,7 +375,7 @@ class Dependency(PackageSpecification):
             groups=list(self._groups),
             allows_prereleases=self.allows_prereleases(),
             extras=self._extras,
-            source_type=self._source_type,
+            source_type=self.source_type,
             source_url=self._source_url,
             source_reference=self._source_reference,
         )

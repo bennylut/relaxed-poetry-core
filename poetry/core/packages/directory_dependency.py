@@ -150,8 +150,8 @@ class SiblingDependency(DirectoryDependency):
             extras: Optional[Union[List[str], FrozenSet[str]]] = None,
     ):
         super(SiblingDependency, self).__init__(
-            name, path, groups=groups, optional=optional, base=base, extras=extras)
-
+            name, path, groups=groups, optional=optional, base=base, extras=extras, develop=True)
+        self._source_type = "sibling"
         self.set_constraint(constraint)
 
     @property

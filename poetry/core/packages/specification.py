@@ -17,7 +17,7 @@ class PackageSpecification(object):
 
         self._pretty_name = name
         self._name = canonicalize_name(name)
-        self._source_type = source_type
+        self.source_type = source_type
         self._source_url = source_url
         self._source_reference = source_reference
         self._source_resolved_reference = source_resolved_reference
@@ -43,10 +43,10 @@ class PackageSpecification(object):
             name = "{}[{}]".format(name, ",".join(sorted(self._features)))
 
         return name
-
-    @property
-    def source_type(self) -> Optional[str]:
-        return self._source_type
+    #
+    # @property
+    # def source_type(self) -> Optional[str]:
+    #     return self.source_type
 
     @property
     def source_url(self) -> Optional[str]:
@@ -68,8 +68,8 @@ class PackageSpecification(object):
         if other.complete_name != self.complete_name:
             return False
 
-        if self._source_type:
-            if self._source_type != other.source_type:
+        if self.source_type:
+            if self.source_type != other.source_type:
                 return False
 
             if self._source_url or other.source_url:
@@ -102,12 +102,12 @@ class PackageSpecification(object):
         return True
 
     def __hash__(self) -> int:
-        if not self._source_type:
+        if not self.source_type:
             return hash(self._name)
 
         return (
             hash(self._name)
-            ^ hash(self._source_type)
+            ^ hash(self.source_type)
             ^ hash(self._source_url)
             ^ hash(self._source_reference)
             ^ hash(self._source_resolved_reference)

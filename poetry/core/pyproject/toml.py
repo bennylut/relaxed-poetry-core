@@ -61,7 +61,7 @@ class PyProject:
     def sub_projects(self) -> Optional[Dict[str, "PyProject"]]:
         sub_project_defs: Dict[str, str] = nesteddict_lookup(self.data, SUBPROJECTS_TABLE)
         if not sub_project_defs:
-            return None
+            return {}
 
         return {name: PyProject.read(_relativize(self.path.parent, path) / "pyproject.toml", None) for name, path in
                 sub_project_defs.items()}
@@ -102,12 +102,9 @@ class PyProject:
         return self._is_parent
 
     def lookup_sibling(self, name: str) -> Optional["PyProject"]:
-        if not self.parent:
-            return None
-
-        p = self.parent
+        p = self
         while p:
-            sibling = self.parent.sub_projects.get(name)
+            sibling = p.sub_projects.get(name)
             if sibling:
                 return sibling
             p = p.parent

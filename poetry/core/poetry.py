@@ -9,7 +9,7 @@ from poetry.core.pyproject.toml import PyProject
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from poetry.core.packages import ProjectPackage  # noqa
+    from poetry.core.packages.project_package import ProjectPackage  # noqa
     from poetry.core.pyproject.toml import PyProject  # noqa
     from poetry.core.pyproject.toml import PyProjectTOMLFile  # noqa
 
