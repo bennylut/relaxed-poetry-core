@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "relaxed-poetry-core"
-version = "0.1.1"
+version = "0.1.2"
 description = "Fork of poetry-core, with some relaxations"
 authors = ["bennylut"]
 

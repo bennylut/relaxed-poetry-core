@@ -9,7 +9,8 @@ from poetry.core.pyproject.properties import substitute_toml
 from poetry.core.utils.collections_ext import nesteddict_lookup
 from tomlkit.toml_document import TOMLDocument
 from poetry.core.toml import TOMLFile
-from poetry.core.pyproject.tables import BuildSystem, PROPERTIES_TABLE, POETRY_TABLE, SUBPROJECTS_TABLE
+from poetry.core.pyproject.tables import BuildSystem, PROPERTIES_TABLE, POETRY_TABLE, SUBPROJECTS_TABLE, \
+    DEPENDENCIES_TABLE
 from poetry.core.utils.props_ext import cached_property
 
 if TYPE_CHECKING:
@@ -56,6 +57,11 @@ class PyProject:
     @cached_property
     def project_management_files(self) -> Path:
         return self.path.parent / _PROJECT_MANAGEMENT_FILES_SUBDIR
+
+    @cached_property
+    def requires_python(self):
+        deps = nesteddict_lookup(self.data, DEPENDENCIES_TABLE, {})
+        return 'python' in deps
 
     @cached_property
     def sub_projects(self) -> Optional[Dict[str, "PyProject"]]:

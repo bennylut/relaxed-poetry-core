@@ -108,6 +108,8 @@ class Factory(object):
 
         if "readme" in config:
             package.readme = root / config["readme"]
+            if not package.readme.exists():
+                package.readme = None
 
         if "platform" in config:
             package.platform = config["platform"]
