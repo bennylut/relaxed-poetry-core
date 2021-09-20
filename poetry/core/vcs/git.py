@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 from typing import Optional
 
+from poetry.core.utils._compat import WINDOWS
+
 
 pattern_formats = {
     "protocol": r"\w+",
@@ -14,7 +16,8 @@ pattern_formats = {
     "port": r"\d+",
     "path": r"[\w~.\-/\\]+",
     "name": r"[\w~.\-]+",
-    "rev": r"[^@#]+",
+    "rev": r"[^@#]+?",
+    "subdir": r"[\w\-/\\]+",
 }
 
 PATTERNS = [
@@ -26,7 +29,13 @@ PATTERNS = [
         r"(:(?P<port>{port}))?"
         r"(?P<pathname>[:/\\]({path}[/\\])?"
         r"((?P<name>{name}?)(\.git|[/\\])?)?)"
-        r"([@#](?P<rev>{rev}))?"
+        r"(?:"
+        r"#egg=?.+"
+        r"|"
+        r"#(?:egg=.+?&subdirectory=|subdirectory=)(?P<subdirectory>{subdir})"
+        r"|"
+        r"[@#](?P<rev>{rev})(?:[&#](?:egg=.+?|(?:egg=.+?&subdirectory=|subdirectory=)(?P<rev_subdirectory>{subdir})))?"
+        r")?"
         r"$".format(
             user=pattern_formats["user"],
             resource=pattern_formats["resource"],
@@ -34,6 +43,7 @@ PATTERNS = [
             path=pattern_formats["path"],
             name=pattern_formats["name"],
             rev=pattern_formats["rev"],
+            subdir=pattern_formats["subdir"],
         )
     ),
     re.compile(
@@ -44,7 +54,13 @@ PATTERNS = [
         r"(:(?P<port>{port}))?"
         r"(?P<pathname>({path})"
         r"(?P<name>{name})(\.git|/)?)"
-        r"([@#](?P<rev>{rev}))?"
+        r"(?:"
+        r"#egg=?.+"
+        r"|"
+        r"#(?:egg=.+?&subdirectory=|subdirectory=)(?P<subdirectory>{subdir})"
+        r"|"
+        r"[@#](?P<rev>{rev})(?:[&#](?:egg=.+?|(?:egg=.+?&subdirectory=|subdirectory=)(?P<rev_subdirectory>{subdir})))?"
+        r")?"
         r"$".format(
             protocol=pattern_formats["protocol"],
             user=pattern_formats["user"],
@@ -53,6 +69,7 @@ PATTERNS = [
             path=pattern_formats["path"],
             name=pattern_formats["name"],
             rev=pattern_formats["rev"],
+            subdir=pattern_formats["subdir"],
         )
     ),
     re.compile(
@@ -61,7 +78,13 @@ PATTERNS = [
         r"(:(?P<port>{port}))?"
         r"(?P<pathname>([:/]{path}/)"
         r"(?P<name>{name})(\.git|/)?)"
-        r"([@#](?P<rev>{rev}))?"
+        r"(?:"
+        r"#egg=.+?"
+        r"|"
+        r"#(?:egg=.+?&subdirectory=|subdirectory=)(?P<subdirectory>{subdir})"
+        r"|"
+        r"[@#](?P<rev>{rev})(?:[&#](?:egg=.+?&subdirectory=|subdirectory=)(?P<rev_subdirectory>{subdir}))?"
+        r")?"
         r"$".format(
             user=pattern_formats["user"],
             resource=pattern_formats["resource"],
@@ -69,6 +92,7 @@ PATTERNS = [
             path=pattern_formats["path"],
             name=pattern_formats["name"],
             rev=pattern_formats["rev"],
+            subdir=pattern_formats["subdir"],
         )
     ),
     re.compile(
@@ -77,16 +101,28 @@ PATTERNS = [
         r"[:/]{{1,2}}"
         r"(?P<pathname>({path})"
         r"(?P<name>{name})(\.git|/)?)"
-        r"([@#](?P<rev>{rev}))?"
+        r"(?:"
+        r"#egg=?.+"
+        r"|"
+        r"#(?:egg=.+?&subdirectory=|subdirectory=)(?P<subdirectory>{subdir})"
+        r"|"
+        r"[@#](?P<rev>{rev})(?:[&#](?:egg=.+?|(?:egg=.+?&subdirectory=|subdirectory=)(?P<rev_subdirectory>{subdir})))?"
+        r")?"
         r"$".format(
             user=pattern_formats["user"],
             resource=pattern_formats["resource"],
             path=pattern_formats["path"],
             name=pattern_formats["name"],
             rev=pattern_formats["rev"],
+            subdir=pattern_formats["subdir"],
         )
     ),
 ]
+
+
+class GitError(RuntimeError):
+
+    pass
 
 
 class ParsedUrl:
@@ -99,6 +135,7 @@ class ParsedUrl:
         port: Optional[str],
         name: Optional[str],
         rev: Optional[str],
+        subdirectory: Optional[str] = None,
     ):
         self.protocol = protocol
         self.resource = resource
@@ -107,6 +144,7 @@ class ParsedUrl:
         self.port = port
         self.name = name
         self.rev = rev
+        self.subdirectory = subdirectory
 
     @classmethod
     def parse(cls, url: str) -> "ParsedUrl":
@@ -122,6 +160,7 @@ class ParsedUrl:
                     groups.get("port"),
                     groups.get("name"),
                     groups.get("rev"),
+                    groups.get("rev_subdirectory") or groups.get("subdirectory"),
                 )
 
         raise ValueError('Invalid git url "{}"'.format(url))
@@ -143,7 +182,48 @@ class ParsedUrl:
         return self.format()
 
 
-GitUrl = namedtuple("GitUrl", ["url", "revision"])
+GitUrl = namedtuple("GitUrl", ["url", "revision", "subdirectory"])
+
+
+_executable: Optional[str] = None
+
+
+def executable():
+    global _executable
+
+    if _executable is not None:
+        return _executable
+
+    if WINDOWS:
+        # Finding git via where.exe
+        where = "%WINDIR%\\System32\\where.exe"
+        paths = subprocess.check_output(
+            [where, "git"], shell=True, encoding="oem"
+        ).split("\n")
+        for path in paths:
+            if not path:
+                continue
+
+            path = Path(path.strip())
+            try:
+                path.relative_to(Path.cwd())
+            except ValueError:
+                _executable = str(path)
+
+                break
+    else:
+        _executable = "git"
+
+    if _executable is None:
+        raise RuntimeError("Unable to find a valid git executable")
+
+    return _executable
+
+
+def _reset_executable():
+    global _executable
+
+    _executable = None
 
 
 class GitConfig:
@@ -152,7 +232,7 @@ class GitConfig:
 
         try:
             config_list = subprocess.check_output(
-                ["git", "config", "-l"], stderr=subprocess.STDOUT
+                [executable(), "config", "-l"], stderr=subprocess.STDOUT
             ).decode()
 
             m = re.findall("(?ms)^([^=]+)=(.*?)$", config_list)
@@ -183,6 +263,11 @@ class Git:
         if parsed.rev:
             formatted = re.sub(r"[#@]{}$".format(parsed.rev), "", formatted)
 
+        if parsed.subdirectory:
+            formatted = re.sub(
+                r"[#&]subdirectory={}$".format(parsed.subdirectory), "", formatted
+            )
+
         altered = parsed.format() != formatted
 
         if altered:
@@ -197,14 +282,18 @@ class Git:
         else:
             normalized = parsed.format()
 
-        return GitUrl(re.sub(r"#[^#]*$", "", normalized), parsed.rev)
+        return GitUrl(
+            re.sub(r"#[^#]*$", "", normalized), parsed.rev, parsed.subdirectory
+        )
 
     @property
     def config(self) -> GitConfig:
         return self._config
 
     def clone(self, repository: str, dest: Path) -> str:
-        return self.run("clone", "--recurse-submodules", repository, str(dest))
+        self._check_parameter(repository)
+
+        return self.run("clone", "--recurse-submodules", "--", repository, str(dest))
 
     def checkout(self, rev: str, folder: Optional[Path] = None) -> str:
         args = []
@@ -219,6 +308,8 @@ class Git:
                 folder.as_posix(),
             ]
 
+        self._check_parameter(rev)
+
         args += ["checkout", rev]
 
         return self.run(*args)
@@ -228,13 +319,7 @@ class Git:
         if folder is None and self._work_dir:
             folder = self._work_dir
 
-        if folder:
-            args += [
-                "--git-dir",
-                (folder / ".git").as_posix(),
-                "--work-tree",
-                folder.as_posix(),
-            ]
+        self._check_parameter(rev)
 
         # We need "^0" (an alternative to "^{commit}") to ensure that the
         # commit SHA of the commit the tag points to is returned, even in
@@ -246,7 +331,15 @@ class Git:
         # they should not be escaped.
         args += ["rev-parse", rev + "^0"]
 
-        return self.run(*args)
+        return self.run(*args, folder=folder)
+
+    def get_current_branch(self, folder: Optional[Path] = None) -> str:
+        if folder is None and self._work_dir:
+            folder = self._work_dir
+
+        output = self.run("symbolic-ref", "--short", "HEAD", folder=folder)
+
+        return output.strip()
 
     def get_ignored_files(self, folder: Optional[Path] = None) -> list:
         args = []
@@ -294,7 +387,16 @@ class Git:
             ) + args
 
         return (
-            subprocess.check_output(["git"] + list(args), stderr=subprocess.STDOUT)
+            subprocess.check_output(
+                [executable()] + list(args), stderr=subprocess.STDOUT
+            )
             .decode()
             .strip()
         )
+
+    def _check_parameter(self, parameter: str) -> str:
+        """
+        Checks a git parameter to avoid unwanted code execution.
+        """
+        if parameter.strip().startswith("-"):
+            raise GitError(f"Invalid Git parameter: {parameter}")

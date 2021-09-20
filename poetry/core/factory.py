@@ -295,6 +295,7 @@ class Factory(object):
                     branch=constraint.get("branch", None),
                     tag=constraint.get("tag", None),
                     rev=constraint.get("rev", None),
+                    directory=constraint.get("subdirectory", None),
                     groups=groups,
                     optional=optional,
                     develop=constraint.get("develop", False),

@@ -42,6 +42,7 @@ class Dependency(PackageSpecification):
         source_reference: Optional[str] = None,
         source_resolved_reference: Optional[str] = None,
         forced_version = False,
+	source_subdirectory: Optional[str] = None,
     ):
         from poetry.core.version.markers import AnyMarker
 
@@ -51,6 +52,7 @@ class Dependency(PackageSpecification):
             source_url=source_url,
             source_reference=source_reference,
             source_resolved_reference=source_resolved_reference,
+            source_subdirectory=source_subdirectory,
             features=extras,
         )
 
@@ -416,7 +418,7 @@ class Dependency(PackageSpecification):
         from .vcs_dependency import VCSDependency
 
         # Removing comments
-        parts = name.split("#", 1)
+        parts = name.split(" #", 1)
         name = parts[0].strip()
         if len(parts) > 1:
             rest = parts[1]
@@ -478,7 +480,12 @@ class Dependency(PackageSpecification):
             if link.scheme.startswith("git+"):
                 url = ParsedUrl.parse(link.url)
                 dep = VCSDependency(
-                    name, "git", url.url, rev=url.rev, extras=req.extras
+                    name,
+                    "git",
+                    url.url,
+                    rev=url.rev,
+                    directory=url.subdirectory,
+                    extras=req.extras,
                 )
             elif link.scheme == "git":
                 dep = VCSDependency(
@@ -618,28 +625,3 @@ def _make_file_or_dir_dep(
         return DirectoryDependency(name, path, base=base, extras=extras)
 
     return None
-
-
-def base_pep_508_name_of(self: Dependency) -> str:
-    from poetry.core.semver.version import Version
-    from poetry.core.semver.version_union import VersionUnion
-
-    requirement = self.pretty_name
-
-    if self.extras:
-        requirement += "[{}]".format(",".join(self.extras))
-
-    if isinstance(self.constraint, VersionUnion):
-        if self.constraint.excludes_single_version():
-            requirement += " ({})".format(str(self.constraint))
-        else:
-            constraints = self.pretty_constraint.split(",")
-            constraints = [parse_constraint(c) for c in constraints]
-            constraints = [str(c) for c in constraints]
-            requirement += " ({})".format(",".join(constraints))
-    elif isinstance(self.constraint, Version):
-        requirement += " (=={})".format(self.constraint.text)
-    elif not self.constraint.is_any():
-        requirement += " ({})".format(str(self.constraint).replace(" ", ""))
-
-    return requirement
