@@ -6,16 +6,16 @@ from typing import Union
 
 from poetry.core.pyproject.profiles import ProfilesActivationData, apply_profiles
 from poetry.core.pyproject.properties import substitute_toml
-from poetry.core.utils.collections_ext import nesteddict_lookup
+from poetry.core.utils.collections_ext import nesteddict_lookup, nesteddict_put, nesteddict_put_if_absent
 from tomlkit.toml_document import TOMLDocument
 from poetry.core.toml import TOMLFile
 from poetry.core.pyproject.tables import BuildSystem, PROPERTIES_TABLE, POETRY_TABLE, SUBPROJECTS_TABLE, \
     DEPENDENCIES_TABLE
 from poetry.core.utils.props_ext import cached_property
+from tomlkit.items import Item
 
 if TYPE_CHECKING:
     from tomlkit.container import Container
-    from tomlkit.items import Item
 
 _PY_PROJECT_CACHE = {}
 
@@ -39,12 +39,12 @@ class PyProject:
         self._build_system: Optional["BuildSystem"] = None
 
     @property
-    def name(self):
-        return nesteddict_lookup(self.data, _NAME_KEY)
+    def name(self) -> str:
+        return self[_NAME_KEY]
 
     @property
-    def version(self):
-        return nesteddict_lookup(self.data, _VERSION_KEY)
+    def version(self) -> str:
+        return self[_VERSION_KEY]
 
     @property
     def file(self) -> "TOMLFile":
@@ -52,7 +52,7 @@ class PyProject:
 
     @property
     def properties(self) -> Dict[str, Any]:
-        return nesteddict_lookup(self.data, PROPERTIES_TABLE, None)
+        return self[PROPERTIES_TABLE]
 
     @cached_property
     def project_management_files(self) -> Path:
@@ -60,12 +60,12 @@ class PyProject:
 
     @cached_property
     def requires_python(self):
-        deps = nesteddict_lookup(self.data, DEPENDENCIES_TABLE, {})
+        deps = self[DEPENDENCIES_TABLE] or {}
         return 'python' in deps
 
     @cached_property
     def sub_projects(self) -> Optional[Dict[str, "PyProject"]]:
-        sub_project_defs: Dict[str, str] = nesteddict_lookup(self.data, SUBPROJECTS_TABLE)
+        sub_project_defs: Dict[str, str] = self[SUBPROJECTS_TABLE]
         if not sub_project_defs:
             return {}
 
@@ -94,8 +94,8 @@ class PyProject:
 
     @property
     def poetry_config(self) -> Optional[Union["Item", "Container"]]:
-        config = nesteddict_lookup(self.data, POETRY_TABLE)
-        if not config:
+        config = self[POETRY_TABLE]
+        if config is None:
             from poetry.core.pyproject.exceptions import PyProjectException
             raise PyProjectException(f"[tool.poetry] section not found in {self._file}")
 
@@ -103,7 +103,7 @@ class PyProject:
 
     def is_parent(self):
         if self._is_parent is None:
-            self._is_parent = nesteddict_lookup(self.data, SUBPROJECTS_TABLE) is not None
+            self._is_parent = self[SUBPROJECTS_TABLE] is not None
 
         return self._is_parent
 
@@ -118,12 +118,45 @@ class PyProject:
         return None
 
     def is_poetry_project(self) -> bool:
-        return nesteddict_lookup(self.data, POETRY_TABLE) is not None
+        return self[POETRY_TABLE] is not None
 
-    def __getattr__(self, item: str) -> Any:
-        return getattr(self.data, item)
+    def __getitem__(self, item: Union[str, List[str]]) -> Any:
+        """
+        :param item: table key like "tool.relaxed-poetry.properties" or ["tool", "relaxed-poetry", "properties"]
+        :return: the table if it exists otherwise None
+        """
+        path = item.split(".") if not isinstance(item, List) else item
+        return nesteddict_lookup(self.data, path)
+
+    def __setitem__(self, key: Union[str, List[str]], value: Dict):
+        """
+        :param key: table key like "tool.relaxed-poetry.properties" or ["tool", "relaxed-poetry", "properties"]
+        :param value: a dictionary to set as the table content
+        """
+        path = key.split(".") if not isinstance(key, List) else key
+        nesteddict_put(self.data, path, value)
+
+    def get_or_create_table(self, table_key: Union[str, List[str]]):
+        """
+        :param table_key: table key like "tool.relaxed-poetry.properties" or ["tool", "relaxed-poetry", "properties"]
+        :return: the existing table dictionary if it exists, otherwise, add a new table dictionary and return it
+        """
+        path = table_key.split(".") if not isinstance(table_key, List) else table_key
+        result = nesteddict_put_if_absent(self.data, path, {})
+        # result = nesteddict_lookup(self.data, path)
+        if result and not isinstance(result, dict):
+            raise ValueError(f"{table_key} is not a table")
+
+        # if not result:
+        #     result = table()
+        #     self.data[".".join(path)] = result
+        #
+        return result
 
     def save(self) -> None:
+        """
+        save the pyproject changes back to the file it was read from
+        """
         from tomlkit.container import Container
 
         data = self.data

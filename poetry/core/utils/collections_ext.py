@@ -7,7 +7,7 @@ V = TypeVar("V")
 
 def nesteddict_lookup(d: Dict, path: List[K], default: Optional[V] = None) -> Union[Dict, V, None]:
     try:
-        return reduce(dict.__getitem__, path, d)
+        return reduce(lambda m, k: m[k], path, d)
     except KeyError:
         return default
 
@@ -38,8 +38,6 @@ def nesteddict_put_if_absent(d: Dict, path: List[K], value: V) -> V:
         r[lp] = value
 
     return r[lp]
-
-
 
 
 if __name__ == '__main__':
