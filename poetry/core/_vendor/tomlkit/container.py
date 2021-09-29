@@ -25,7 +25,6 @@ from .items import Table
 from .items import Whitespace
 from .items import item as _item
 
-
 _NOT_SET = object()
 
 
@@ -75,7 +74,7 @@ class Container(dict):
                     t.value.parsing(parsing)
 
     def add(
-        self, key, item=None
+            self, key, item=None
     ):  # type: (Union[Key, Item, str], Optional[Item]) -> Container
         """
         Adds an item to the current Container.
@@ -101,10 +100,10 @@ class Container(dict):
             item.name = key.key
 
         if (
-            isinstance(item, Table)
-            and self._body
-            and not self._parsed
-            and not item.trivia.indent
+                isinstance(item, Table)
+                and self._body
+                and not self._parsed
+                and not item.trivia.indent
         ):
             item.trivia.indent = "\n"
 
@@ -150,9 +149,9 @@ class Container(dict):
                     if item.is_super_table():
                         # We need to merge both super tables
                         if (
-                            self._table_keys[-1] != current_body_element[0]
-                            or key.is_dotted()
-                            or current_body_element[0].is_dotted()
+                                self._table_keys[-1] != current_body_element[0]
+                                or key.is_dotted()
+                                or current_body_element[0].is_dotted()
                         ):
                             if not isinstance(current_idx, tuple):
                                 current_idx = (current_idx,)
@@ -215,9 +214,9 @@ class Container(dict):
                     else:
                         previous_item = self._body[-1][1]
                         if (
-                            not isinstance(previous_item, Whitespace)
-                            and not is_table
-                            and "\n" not in previous_item.trivia.trail
+                                not isinstance(previous_item, Whitespace)
+                                and not is_table
+                                and "\n" not in previous_item.trivia.trail
                         ):
                             previous_item.trivia.trail += "\n"
                 else:
@@ -270,7 +269,7 @@ class Container(dict):
         return self
 
     def _insert_after(
-        self, key, other_key, item
+            self, key, other_key, item
     ):  # type: (Union[str, Key], Union[str, Key], Union[Item, Any]) -> Container
         if key is None:
             raise ValueError("Key cannot be null in insert_after()")
@@ -317,7 +316,7 @@ class Container(dict):
         return self
 
     def _insert_at(
-        self, idx, key, item
+            self, idx, key, item
     ):  # type: (int, Union[str, Key], Union[Item, Any]) -> Container
         if idx > len(self._body) - 1:
             raise ValueError("Unable to insert at position {}".format(idx))
@@ -330,9 +329,9 @@ class Container(dict):
         if idx > 0:
             previous_item = self._body[idx - 1][1]
             if (
-                not isinstance(previous_item, Whitespace)
-                and not isinstance(item, (AoT, Table))
-                and "\n" not in previous_item.trivia.trail
+                    not isinstance(previous_item, Whitespace)
+                    and not isinstance(item, (AoT, Table))
+                    and "\n" not in previous_item.trivia.trail
             ):
                 previous_item.trivia.trail += "\n"
 
@@ -394,7 +393,7 @@ class Container(dict):
         return s
 
     def _render_table(
-        self, key, table, prefix=None
+            self, key, table, prefix=None
     ):  # (Key, Table, Optional[str]) -> str
         cur = ""
 
@@ -407,10 +406,10 @@ class Container(dict):
                 _key = prefix + "." + _key
 
         if not table.is_super_table() or (
-            any(
-                not isinstance(v, (Table, AoT, Whitespace)) for _, v in table.value.body
-            )
-            and not key.is_dotted()
+                any(
+                    not isinstance(v, (Table, AoT, Whitespace)) for _, v in table.value.body
+                )
+                and not key.is_dotted()
         ):
             open_, close = "[", "]"
             if table.is_aot_element():
@@ -554,7 +553,7 @@ class Container(dict):
         return value
 
     def setdefault(
-        self, key, default=None
+            self, key, default=None
     ):  # type: (Union[Key, str], Any) -> Union[Item, Container]
         if key not in self:
             self[key] = default
@@ -597,7 +596,7 @@ class Container(dict):
         self.remove(key)
 
     def _replace(
-        self, key, new_key, value
+            self, key, new_key, value
     ):  # type: (Union[Key, str], Union[Key, str], Item) -> None
         if not isinstance(key, Key):
             key = Key(key)
@@ -612,7 +611,7 @@ class Container(dict):
         self._replace_at(idx, new_key, value)
 
     def _replace_at(
-        self, idx, new_key, value
+            self, idx, new_key, value
     ):  # type: (Union[int, Tuple[int]], Union[Key, str], Item) -> None
         if not isinstance(new_key, Key):
             new_key = Key(new_key)
@@ -777,7 +776,7 @@ class OutOfOrderTableProxy(dict):
         return self._internal_container.pop(key, default=default)
 
     def setdefault(
-        self, key, default=None
+            self, key, default=None
     ):  # type: (Union[Key, str], Any) -> Union[Item, Container]
         return self._internal_container.setdefault(key, default=default)
 
