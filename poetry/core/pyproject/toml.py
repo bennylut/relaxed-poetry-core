@@ -28,8 +28,10 @@ _VERSION_KEY = "tool.poetry.version".split(".")
 
 
 class PyProject:
-    def __init__(self, path: Path, data: TOMLDocument, parent: Optional["PyProject"]):
-        self._file = TOMLFile(path=path)  # here to support original poetry interface
+    def __init__(self, path: Optional[Path], data: TOMLDocument, parent: Optional["PyProject"]):
+
+        # here to support original poetry interface
+        self._file = TOMLFile(path=path) if path is not None else None
 
         self.path = path
         self.data = data
@@ -37,6 +39,9 @@ class PyProject:
 
         self._is_parent = None
         self._build_system: Optional["BuildSystem"] = None
+
+    def is_stored(self):
+        return self.path is not None
 
     @property
     def name(self) -> str:
@@ -55,8 +60,15 @@ class PyProject:
         return self[PROPERTIES_TABLE]
 
     @cached_property
-    def project_management_files(self) -> Path:
+    def project_management_files(self) -> Optional[Path]:
+        if not self.is_stored():
+            return None
+
         return self.path.parent / _PROJECT_MANAGEMENT_FILES_SUBDIR
+
+    @cached_property
+    def dependencies(self):
+        return self.get_or_create_table(DEPENDENCIES_TABLE)
 
     @cached_property
     def requires_python(self):
@@ -159,6 +171,9 @@ class PyProject:
         """
         from tomlkit.container import Container
 
+        if not self.is_stored():
+            raise ValueError("cannot save in-memory pyproject.")
+
         data = self.data
 
         if self._build_system is not None:
@@ -202,7 +217,7 @@ class PyProject:
         return nesteddict_lookup(data, POETRY_TABLE) is not None
 
     @staticmethod
-    def read(path: Union[Path, str], profiles: Optional[ProfilesActivationData]) -> "PyProject":
+    def read(path: Union[Path, str], profiles: Optional[ProfilesActivationData] = None) -> "PyProject":
         path = Path(path) if not isinstance(path, Path) else path
 
         cache_key = f"{path}/{profiles}"
@@ -237,6 +252,21 @@ class PyProject:
             _PY_PROJECT_CACHE[cache_key] = PyProject(path, data, parent)
 
         return _PY_PROJECT_CACHE[cache_key]
+
+    @classmethod
+    def new_in_mem(
+            cls, name: str,
+            version: str = "0.0.1", authors: List[str] = None):
+        data = TOMLDocument()
+        result = PyProject(None, data, None)
+
+        pcfg = result[POETRY_TABLE] = {
+            "name": name,
+            "version": version,
+            "authors": authors or []
+        }
+
+        return result
 
 
 def _relativize(path: Path, relative: Optional[str]):

@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 class Poetry(object):
     def __init__(
         self,
-        file: "Path",
         pyproject: PyProject,
         package: "ProjectPackage",
     ) -> None:

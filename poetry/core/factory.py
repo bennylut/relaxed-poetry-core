@@ -43,7 +43,7 @@ class Factory(object):
             package, local_config, project, with_groups=with_groups
         )
 
-        return Poetry(project.path, project, package)
+        return Poetry(project, package)
 
     def create_poetry(
             self, cwd: Optional[Path] = None, with_groups: bool = True,
@@ -83,7 +83,7 @@ class Factory(object):
         from .packages.dependency_group import DependencyGroup
         from .spdx.helpers import license_by_id
 
-        root = project.path.parent
+        root = project.path.parent if project.is_stored() else None
 
         package.root_dir = root
 
@@ -106,7 +106,7 @@ class Factory(object):
         package.keywords = config.get("keywords", [])
         package.classifiers = config.get("classifiers", [])
 
-        if "readme" in config:
+        if "readme" in config and project.is_stored():
             package.readme = root / config["readme"]
             if not package.readme.exists():
                 package.readme = None
