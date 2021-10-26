@@ -248,7 +248,7 @@ class SingleMarker(BaseMarker):
         return self._constraint_string
 
     @property
-    def constraint(self) -> "VersionTypes":
+    def constraint(self):
         return self._constraint
 
     @property

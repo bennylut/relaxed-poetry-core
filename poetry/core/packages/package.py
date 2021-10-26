@@ -2,7 +2,7 @@ import copy
 import re
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING,  Sequence
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -15,21 +15,18 @@ from .directory_dependency import SiblingDependency
 from .specification import PackageSpecification
 from .utils.utils import create_nested_marker
 
-
 if TYPE_CHECKING:
     from poetry.core.semver.helpers import VersionTypes  # noqa
     from poetry.core.semver.version import Version  # noqa
     from poetry.core.spdx.license import License  # noqa
     from poetry.core.version.markers import BaseMarker  # noqa
 
-    from .dependency_group import DependencyGroup
     from .types import DependencyTypes
 
 AUTHOR_REGEX = re.compile(r"(?u)^(?P<name>[- .,\w\d'’\"()&]+)(?: <(?P<email>.+?)>)?$")
 
 
 class Package(PackageSpecification):
-
     AVAILABLE_PYTHONS = {
         "2",
         "2.7",
@@ -44,17 +41,17 @@ class Package(PackageSpecification):
     }
 
     def __init__(
-        self,
-        name: str,
-        version: Union[str, "Version"],
-        pretty_version: Optional[str] = None,
-        source_type: Optional[str] = None,
-        source_url: Optional[str] = None,
-        source_reference: Optional[str] = None,
-        source_resolved_reference: Optional[str] = None,
-        source_subdirectory: Optional[str] = None,
-        features: Optional[List[str]] = None,
-        develop: bool = False,
+            self,
+            name: str,
+            version: Union[str, "Version"],
+            pretty_version: Optional[str] = None,
+            source_type: Optional[str] = None,
+            source_url: Optional[str] = None,
+            source_reference: Optional[str] = None,
+            source_resolved_reference: Optional[str] = None,
+            source_subdirectory: Optional[str] = None,
+            features: Optional[List[str]] = None,
+            develop: bool = False,
     ) -> None:
         """
         Creates a new in memory package.
@@ -91,13 +88,14 @@ class Package(PackageSpecification):
         self._license = None
         self.readme = None
 
-        self.extras = {}
+        self.extras : Dict[str, List["DependencyTypes"]] = {}
         self.requires_extras = []
 
-        self._dependency_groups: Dict[str, "DependencyGroup"] = {}
+        self._dependencies: Dict[str, List["DependencyTypes"]] = {}
+
+        # self._dependency_groups: Dict[str, "DependencyGroup"] = {}
 
         # For compatibility with previous version, we keep the category
-        self.category = "main"
         self.files = []
         self.optional = False
 
@@ -193,24 +191,28 @@ class Package(PackageSpecification):
         """
         Returns the default dependencies
         """
-        if not self._dependency_groups or "default" not in self._dependency_groups:
-            return []
-
-        return self._dependency_groups["default"].dependencies
+        return [req for reqs in self._dependencies.values() for req in reqs]
+        # if not self._dependency_groups or "default" not in self._dependency_groups:
+        #     return []
+        #
+        # return self._dependency_groups["default"].dependencies
 
     @property
-    def all_requires(
-        self,
-    ) -> List[Union["DependencyTypes"]]:
+    def all_requires(self, ) -> List["DependencyTypes"]:
         """
         Returns the default dependencies and group dependencies.
+
+        .. deprecated:: 0.3.0
+           groups removed so there is no need in this function anymore
         """
-        return self.requires + [
-            dependency
-            for group in self._dependency_groups.values()
-            for dependency in group.dependencies
-            if group.name != "default"
-        ]
+        # return self.requires + [
+        #     dependency
+        #     for group in self._dependency_groups.values()
+        #     for dependency in group.dependencies
+        #     if group.name != "default"
+        # ]
+
+        return self.requires
 
     def _get_author(self) -> Dict[str, Optional[str]]:
         if not self._authors:
@@ -300,7 +302,7 @@ class Package(PackageSpecification):
         # we sort python versions by sorting an int tuple of (major, minor) version
         # to ensure we sort 3.10 after 3.9
         for version in sorted(
-            self.AVAILABLE_PYTHONS, key=lambda x: tuple(map(int, x.split(".")))
+                self.AVAILABLE_PYTHONS, key=lambda x: tuple(map(int, x.split(".")))
         ):
             if len(version) == 1:
                 constraint = parse_constraint(version + ".*")
@@ -322,8 +324,8 @@ class Package(PackageSpecification):
         python_classifiers_inserted = False
         for classifier in sorted(set(classifiers)):
             if (
-                not python_classifiers_inserted
-                and classifier > python_classifier_prefix
+                    not python_classifiers_inserted
+                    and classifier > python_classifier_prefix
             ):
                 sorted_classifiers.extend(python_classifiers)
                 python_classifiers_inserted = True
@@ -355,79 +357,17 @@ class Package(PackageSpecification):
     def is_root(self) -> bool:
         return False
 
-    def add_dependency_group(self, group: "DependencyGroup") -> None:
-        self._dependency_groups[group.name] = group
+    def add_dependency(self, dependency: "DependencyTypes"):
+        if dependency.name in self._dependencies:
+            self._dependencies[dependency.name].append(dependency)
+        else:
+            self._dependencies[dependency.name] = [dependency]
 
-    def dependency_group(self, name: str) -> "DependencyGroup":
-        if name not in self._dependency_groups:
-            raise ValueError(f'The dependency group "{name}" does not exist.')
-
-        return self._dependency_groups[name]
-
-    def add_dependency(
-        self,
-        dependency: "DependencyTypes",
-    ) -> "DependencyTypes":
-        from .dependency_group import DependencyGroup
-
-        for group_name in dependency.groups:
-            if group_name not in self._dependency_groups:
-                # Dynamically add the dependency group
-                self.add_dependency_group(DependencyGroup(group_name))
-
-            self._dependency_groups[group_name].add_dependency(dependency)
-
-        return dependency
-
-    def without_dependency_groups(self, groups: List[str]) -> "Package":
-        """
-        Returns a clone of the package with the given dependency groups excluded.
-        """
-        package = self.clone()
-
-        for group_name in groups:
-            if group_name in package._dependency_groups:
-                del package._dependency_groups[group_name]
-
-        return package
-
-    def without_optional_dependency_groups(self) -> "Package":
-        """
-        Returns a clone of the package without optional dependency groups.
-        """
-        package = self.clone()
-
-        for group_name, group in self._dependency_groups.items():
-            if group.is_optional():
-                del package._dependency_groups[group_name]
-
-        return package
-
-    def with_dependency_groups(
-        self, groups: List[str], only: bool = False
-    ) -> "Package":
-        """
-        Returns a clone of the package with the given dependency groups opted in.
-
-        Note that it will return all dependencies across all groups
-        more the given, optional, groups.
-
-        If `only` is set to True, then only the given groups will be selected.
-        """
-        package = self.clone()
-
-        for group_name, group in self._dependency_groups.items():
-            if only:
-                if group_name not in groups:
-                    del package._dependency_groups[group_name]
-            else:
-                if group.is_optional() and group_name not in groups:
-                    del package._dependency_groups[group_name]
-
-        return package
+    def remove_dependency(self, name: str) -> Optional["DependencyTypes"]:
+        return self._dependencies.pop(name)
 
     def to_dependency(
-        self,
+            self,
     ) -> Union["DependencyTypes"]:
         from pathlib import Path
 
@@ -441,7 +381,6 @@ class Package(PackageSpecification):
             dep = DirectoryDependency(
                 self._name,
                 Path(self._source_url),
-                groups=list(self._dependency_groups.keys()),
                 optional=self.optional,
                 base=self.root_dir,
                 develop=self.develop,
@@ -452,7 +391,6 @@ class Package(PackageSpecification):
                 self._name,
                 Path(self._source_url),
                 self._version,
-                groups=list(self._dependency_groups.keys()),
                 optional=self.optional,
                 base=self.root_dir,
                 extras=self.features,
@@ -461,7 +399,6 @@ class Package(PackageSpecification):
             dep = FileDependency(
                 self._name,
                 Path(self._source_url),
-                groups=list(self._dependency_groups.keys()),
                 optional=self.optional,
                 base=self.root_dir,
                 extras=self.features,
@@ -470,7 +407,6 @@ class Package(PackageSpecification):
             dep = URLDependency(
                 self._name,
                 self._source_url,
-                groups=list(self._dependency_groups.keys()),
                 optional=self.optional,
                 extras=self.features,
             )
@@ -482,7 +418,6 @@ class Package(PackageSpecification):
                 rev=self.source_reference,
                 resolved_rev=self.source_resolved_reference,
                 directory=self.source_subdirectory,
-                groups=list(self._dependency_groups.keys()),
                 optional=self.optional,
                 develop=self.develop,
                 extras=self.features,
@@ -521,9 +456,16 @@ class Package(PackageSpecification):
     def without_features(self) -> "Package":
         return self.with_features([])
 
-    def clone(self) -> "Package":
+    def clone(self, with_deps: bool = True) -> "Package":
         clone = self.__class__(self.pretty_name, self.version)
+        if not with_deps:
+            deps = self._dependencies
+            self._dependencies = {}
         clone.__dict__ = copy.deepcopy(self.__dict__)
+        if not with_deps:
+            # noinspection PyUnboundLocalVariable
+            self._dependencies = deps
+
         return clone
 
     def __hash__(self) -> int:

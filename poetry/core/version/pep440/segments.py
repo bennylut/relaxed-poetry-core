@@ -105,6 +105,7 @@ class Release:
         )
 
 
+# noinspection PyArgumentList
 @dataclasses.dataclass(frozen=True, eq=True, order=True)
 class ReleaseTag:
     phase: str

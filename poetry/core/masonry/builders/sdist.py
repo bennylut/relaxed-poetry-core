@@ -20,11 +20,10 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 import io
-import tomlkit
 
 from .builder import Builder
 from .builder import BuildIncludeFile
-
+from ...utils import toml
 
 if TYPE_CHECKING:
     from poetry.core.masonry.utils.package_include import PackageInclude  # noqa
@@ -81,7 +80,7 @@ class SdistBuilder(Builder):
 
             files_to_add = self.find_files_to_add(exclude_build=False)
 
-            pyproject_path_str = str(self._poetry.pyproject.file.path.absolute())
+            pyproject_path_str = str(self._poetry.pyproject.path.absolute())
             for file in sorted(files_to_add, key=lambda x: x.relative_to_source_root()):
                 tar_info = tar.gettarinfo(
                     str(file.path),
@@ -92,7 +91,8 @@ class SdistBuilder(Builder):
                 if tar_info.isreg():
                     if str(file.path.absolute()) == pyproject_path_str:
                         # write pyproject.toml after property substitution
-                        file_content = tomlkit.dumps(self._poetry.pyproject.data).encode()
+                        file_content = toml.dumps(self._poetry.pyproject.data).encode()
+                        # file_content = TomlDoc.in_mem(self._poetry.pyproject.data).editor().generate_content().encode()
                         tar_info.size = len(file_content)
                         tar.addfile(tar_info, io.BytesIO(file_content))
                     else:

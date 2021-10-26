@@ -394,7 +394,7 @@ class Git:
             .strip()
         )
 
-    def _check_parameter(self, parameter: str) -> str:
+    def _check_parameter(self, parameter: str) -> None:
         """
         Checks a git parameter to avoid unwanted code execution.
         """

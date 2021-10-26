@@ -19,13 +19,12 @@ class DirectoryDependency(Dependency):
         self,
         name: str,
         path: Path,
-        groups: Optional[List[str]] = None,
         optional: bool = False,
         base: Optional[Path] = None,
         develop: bool = False,
         extras: Optional[Union[List[str], FrozenSet[str]]] = None,
     ) -> None:
-        from poetry.core.pyproject.toml import PyProject
+        from poetry.core.pyproject.project import Project
 
         self._path = path
         self._base = base or Path.cwd()
@@ -48,7 +47,7 @@ class DirectoryDependency(Dependency):
 
         # Checking content to determine actions
         setup = self._full_path / "setup.py"
-        self._supports_poetry = PyProject.has_poetry_section(self._full_path / "pyproject.toml")
+        self._supports_poetry = Project.has_poetry_section(self._full_path / "pyproject.toml")
 
         if not setup.exists() and not self._supports_poetry:
             raise ValueError(
@@ -60,7 +59,6 @@ class DirectoryDependency(Dependency):
         super(DirectoryDependency, self).__init__(
             name,
             "*",
-            groups=groups,
             optional=optional,
             allows_prereleases=True,
             source_type="directory",
@@ -96,7 +94,6 @@ class DirectoryDependency(Dependency):
             path=self.path,
             base=self.base,
             optional=self.is_optional(),
-            groups=list(self._groups),
             develop=self._develop,
             extras=self._extras,
         )
@@ -144,13 +141,12 @@ class SiblingDependency(DirectoryDependency):
             name: str,
             path: Path,
             constraint: Union[str, "VersionTypes"],
-            groups: Optional[List[str]] = None,
             optional: bool = False,
             base: Optional[Path] = None,
             extras: Optional[Union[List[str], FrozenSet[str]]] = None,
     ):
         super(SiblingDependency, self).__init__(
-            name, path, groups=groups, optional=optional, base=base, extras=extras, develop=True)
+            name, path, optional=optional, base=base, extras=extras, develop=True)
         self._source_type = "sibling"
         self.set_constraint(constraint)
 

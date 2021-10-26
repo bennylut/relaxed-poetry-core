@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "relaxed-poetry-core"
-version = "0.3.0"
+version = "0.4.0"
 description = "Fork of poetry-core, with some relaxations"
 authors = ["bennylut"]
 
@@ -14,7 +14,7 @@ repository = "https://github.com/bennylut/relaxed-poetry-core"
 keywords = ["packaging", "dependency", "poetry", "relaxed-poetry"]
 
 classifiers = [
-    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Build Tools", 
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
@@ -25,7 +25,7 @@ include = [
     { path = "tests", format = "sdist" },
 ]
 exclude = [
-    "**/*.pyc",
+    "**/*.pyc", 
     "**/*.pyi",
 ]
 
@@ -38,7 +38,6 @@ python = "^3.6"
 # required for compatibility
 importlib-metadata = {version = ">=1.7.0", python = "<3.8"}
 dataclasses = {version = ">=0.8", python = "~3.6"}
-tomlkit = "^0.7.2"
 
 [tool.poetry.dev-dependencies]
 pre-commit = {version = "^2.10.0", python = "^3.6.1"}
@@ -96,9 +95,9 @@ patches-dir = "vendors/patches"
 [tool.vendoring.transformations]
 substitute = []
 drop = [
-    "bin/",
-    "*.so",
-    "typing.*",
+    "bin/", 
+    "*.so", 
+    "typing.*", 
     "*/tests/"
 ]
 
@@ -107,7 +106,6 @@ six = ["six.__init__", "six.moves.__init__", "six.moves.configparser"]
 appdirs = []
 
 [tool.vendoring.license.directories]
-
 
 [tool.vendoring.license.fallback-urls]
 pyrsistent = "https://raw.githubusercontent.com/tobgu/pyrsistent/master/LICENSE.mit"

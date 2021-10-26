@@ -1,11 +1,9 @@
 import json
+import os
 from typing import Dict, Any
 
-from tomlkit.toml_document import TOMLDocument
-import os
 
-
-def substitute_toml(doc: TOMLDocument, props: Dict[str, Any]) -> TOMLDocument:
+def substitute_toml(doc: Dict[str, Any], props: Dict[str, Any]):
     # first override table keys with environment variables
     # this means that environment variables overrides profiles changes
     properties = {pkey: _merge_env(pkey, pval) for pkey, pval in props.items()}
@@ -13,8 +11,6 @@ def substitute_toml(doc: TOMLDocument, props: Dict[str, Any]) -> TOMLDocument:
     properties = _substitute_properties(properties)
     # now that we resolved all the property values we can find the document itself
     _substitute(properties, doc)
-
-    return doc
 
 
 def _merge_env(property: str, default_value: Any) -> Any:
@@ -54,12 +50,16 @@ def _substitute_properties(properties: Dict[str, Any]) -> Dict[str, Any]:
 
 def _substitute(props: Dict[str, Any], o: Any) -> Any:
     if isinstance(o, list):
-        for i, item in enumerate(o):
-            o[i] = _substitute(props, item)
+        for i, item in enumerate(list(o)):
+            s = _substitute(props, item)
+            if s is not item:
+                o[i] = s
 
     elif isinstance(o, dict):
-        for k, v in o.items():
-            o[k] = _substitute(props, v)
+        for k, v in list(o.items()):
+            s = _substitute(props, v)
+            if s is not v:
+                o[k] = s
 
     elif isinstance(o, str):
         s = o.strip()

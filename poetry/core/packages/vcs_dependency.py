@@ -43,7 +43,6 @@ class VCSDependency(Dependency):
         super(VCSDependency, self).__init__(
             name,
             "*",
-            groups=groups,
             optional=optional,
             allows_prereleases=True,
             source_type=self._vcs.lower(),
@@ -140,7 +139,6 @@ class VCSDependency(Dependency):
             resolved_rev=self._source_resolved_reference,
             directory=self.directory,
             optional=self.is_optional(),
-            groups=list(self._groups),
             develop=self._develop,
             extras=self._extras,
         )

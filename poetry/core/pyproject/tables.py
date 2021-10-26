@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 PROPERTIES_TABLE = "tool.relaxed-poetry.properties".split(".")
 SUBPROJECTS_TABLE = "tool.relaxed-poetry.sub-projects".split(".")
 POETRY_TABLE = "tool.poetry".split(".")
+SOURCES_TABLE = "tool.poetry.sources".split(".")
 DEPENDENCIES_TABLE = "tool.poetry.dependencies".split(".")
 
 

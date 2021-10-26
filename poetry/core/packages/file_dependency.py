@@ -22,7 +22,6 @@ class FileDependency(Dependency):
         self,
         name: str,
         path: Path,
-        groups: Optional[List[str]] = None,
         optional: bool = False,
         base: Optional[Path] = None,
         extras: Optional[Union[List[str], FrozenSet[str]]] = None,
@@ -46,7 +45,6 @@ class FileDependency(Dependency):
         super(FileDependency, self).__init__(
             name,
             "*",
-            groups=groups,
             optional=optional,
             allows_prereleases=True,
             source_type="file",
@@ -83,7 +81,6 @@ class FileDependency(Dependency):
             path=self.path,
             base=self.base,
             optional=self.is_optional(),
-            groups=list(self._groups),
             extras=self._extras,
         )
 

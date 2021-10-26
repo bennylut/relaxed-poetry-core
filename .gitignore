@@ -36,6 +36,7 @@ MANIFEST.in
 .mypy_cache
 
 .venv
+dbg_tst.py
 /releases/*
 pip-wheel-metadata
 /poetry.toml

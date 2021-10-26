@@ -19,6 +19,7 @@ _INF_TAG = ReleaseTag("z", math.inf)  # noqa
 _NEG_INF_TAG = ReleaseTag("", -math.inf)  # noqa
 
 
+# noinspection PyArgumentList
 @dataclasses.dataclass(frozen=True, eq=True, order=True)
 class PEP440Version:
     epoch: int = dataclasses.field(default=0, compare=False)
@@ -153,6 +154,7 @@ class PEP440Version:
 
     def is_stable(self) -> bool:
         return not self.is_unstable()
+
 
     def next_major(self) -> "PEP440Version":
         release = self.release

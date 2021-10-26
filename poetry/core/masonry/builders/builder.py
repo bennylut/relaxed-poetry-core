@@ -20,6 +20,8 @@ from typing import Union
 
 if TYPE_CHECKING:
     from poetry.core.poetry import Poetry  # noqa
+    from poetry.core.packages.project_package import ProjectPackage
+
 
 
 AUTHOR_REGEX = re.compile(r"(?u)^(?P<name>[- .,\w\d'’\"()]+) <(?P<email>.+?)>$")
@@ -47,7 +49,7 @@ class Builder(object):
         from poetry.core.masonry.utils.module import Module
 
         self._poetry = poetry
-        self._package = poetry.package
+        self._package: "ProjectPackage" = poetry.package
         self._path = poetry.file.parent
         self._excluded_files: Optional[Set[str]] = None
         self._executable = Path(executable or sys.executable)

@@ -10,6 +10,7 @@ from typing import Optional
 try:
     from urllib.request import urlopen
 except ImportError:
+    # noinspection PyCompatibility,PyUnresolvedReferences
     from urllib2 import urlopen
 
 
