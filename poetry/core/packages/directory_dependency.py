@@ -34,23 +34,23 @@ class DirectoryDependency(Dependency):
             try:
                 self._full_path = self._base.joinpath(self._path).resolve()
             except FileNotFoundError:
-                raise ValueError("Directory {} does not exist".format(self._path))
+                raise FileNotFoundError("Directory {} does not exist".format(self._path))
 
         self._develop = develop
         self._supports_poetry = False
 
         if not self._full_path.exists():
-            raise ValueError("Directory {} does not exist".format(self._path))
+            raise FileNotFoundError("Directory {} does not exist".format(self._path))
 
         if self._full_path.is_file():
-            raise ValueError("{} is a file, expected a directory".format(self._path))
+            raise FileNotFoundError("{} is a file, expected a directory".format(self._path))
 
         # Checking content to determine actions
         setup = self._full_path / "setup.py"
         self._supports_poetry = Project.has_poetry_section(self._full_path / "pyproject.toml")
 
         if not setup.exists() and not self._supports_poetry:
-            raise ValueError(
+            raise FileNotFoundError(
                 "Directory {} does not seem to be a Python package".format(
                     self._full_path
                 )

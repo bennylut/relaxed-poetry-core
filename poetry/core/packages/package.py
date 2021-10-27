@@ -364,7 +364,7 @@ class Package(PackageSpecification):
             self._dependencies[dependency.name] = [dependency]
 
     def remove_dependency(self, name: str) -> Optional["DependencyTypes"]:
-        return self._dependencies.pop(name)
+        return self._dependencies.pop(name, None)
 
     def to_dependency(
             self,
